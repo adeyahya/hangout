@@ -23,6 +23,7 @@ COPY . .
 
 # [optional] tests & build
 ENV NODE_ENV=production
+ENV VITE_WS_ENDPOINT=wss://nongkrong.inklusif.id
 RUN bun run build
 
 # copy production dependencies and source code into final image
