@@ -108,7 +108,20 @@ const sdpHandler = (rtc: WebRTC, message: IceSchema.Sdp) =>
 
 const createPeer = (rtc: WebRTC) =>
   E.gen(function* () {
-    const peer = new RTCPeerConnection({});
+    const peer = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun.l.google.com:5349" },
+        { urls: "stun:stun1.l.google.com:3478" },
+        { urls: "stun:stun1.l.google.com:5349" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:5349" },
+        { urls: "stun:stun3.l.google.com:3478" },
+        { urls: "stun:stun3.l.google.com:5349" },
+        { urls: "stun:stun4.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:5349" },
+      ],
+    });
     rtc.peer = O.some(peer);
     const remoteStream = yield* E.try(() => new MediaStream());
     rtc.remote = O.some(remoteStream);
