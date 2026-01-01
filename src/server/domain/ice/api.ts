@@ -14,7 +14,7 @@ export const api = E.gen(function* () {
 
   const router = new Hono().get(
     "/",
-    upgradeWebSocket((c) =>
+    upgradeWebSocket(() =>
       runPromise(
         E.gen(function* (_) {
           yield* E.logInfo("connection upgraded");
