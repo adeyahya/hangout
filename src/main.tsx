@@ -7,6 +7,8 @@ import { queryClient } from "@/lib/query-client";
 
 import { router } from "./router";
 
+import "@/styles/global.css";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

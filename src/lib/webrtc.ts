@@ -1,5 +1,6 @@
 import * as IceSchema from "@/schema/ice-schema";
 
+import { feEnv } from "./fe-env";
 import { Ref } from "effect";
 import type { UnknownException } from "effect/Cause";
 import * as E from "effect/Effect";
@@ -20,13 +21,14 @@ export interface WebRTC {
 export const make = (params: { localStream: MediaStream; iceServers: RTCIceServer[] }) =>
   E.gen(function* () {
     const state = yield* Ref.make({ makingOffer: false });
+    const wsURL = new URL("/api/ice", feEnv.VITE_WS_ENDPOINT);
     const RTC: WebRTC = {
       peer: O.none(),
       iceServers: params.iceServers,
       remote: O.none(),
       local: params.localStream,
       wsConnectionStatus: "connecting",
-      ws: new WebSocket("ws://localhost:3001/api/ice"),
+      ws: new WebSocket(wsURL),
       state,
       dispose: E.void,
     };
@@ -34,7 +36,7 @@ export const make = (params: { localStream: MediaStream; iceServers: RTCIceServe
     const initializeWs = async () => {
       if (RTC.wsConnectionStatus === "disconnected") {
         await E.runPromise(E.sleep("100 millis"));
-        RTC.ws = new WebSocket("ws://localhost:3001/api/ice");
+        RTC.ws = new WebSocket(wsURL);
       }
 
       RTC.ws.onopen = () => {

@@ -34,8 +34,14 @@ function RouteComponent() {
   }, []);
 
   return (
-    <div>
-      <video style={{ width: 400, height: 400 }} controls={false} muted autoPlay ref={videoRef} />
+    <div className="grid grid-cols-2 h-screen w-screen bg-black">
+      <video
+        className="w-full h-full object-contain bg-black"
+        controls={false}
+        muted
+        autoPlay
+        ref={videoRef}
+      />
       {remote && <Vid stream={remote} />}
     </div>
   );
@@ -50,5 +56,12 @@ const Vid = (props: { stream: MediaStream }) => {
     videoRef.current.srcObject = props.stream;
   }, [props.stream]);
 
-  return <video style={{ width: 400, height: 400 }} controls={false} autoPlay ref={videoRef} />;
+  return (
+    <video
+      className="w-full h-full object-contain bg-black"
+      controls={false}
+      autoPlay
+      ref={videoRef}
+    />
+  );
 };
