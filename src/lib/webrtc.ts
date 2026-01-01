@@ -9,7 +9,7 @@ import * as O from "effect/Option";
 
 export interface WebRTC {
   peer: O.Option<RTCPeerConnection>;
-  iceServers: Array<RTCIceServer>;
+  iceServer: RTCIceServer;
   local: MediaStream;
   remote: O.Option<MediaStream>;
   state: Ref.Ref<{ makingOffer: boolean }>;
@@ -24,7 +24,28 @@ export const make = (params: { localStream: MediaStream; iceServers: RTCIceServe
     const wsURL = new URL("/api/ice", feEnv.VITE_WS_ENDPOINT);
     const RTC: WebRTC = {
       peer: O.none(),
-      iceServers: params.iceServers,
+      iceServer: {
+        urls: [
+          "stun.l.google.com:19302",
+          "stun1.l.google.com:19302",
+          "stun2.l.google.com:19302",
+          "stun3.l.google.com:19302",
+          "stun4.l.google.com:19302",
+          "stun01.sipphone.com",
+          "stun.ekiga.net",
+          "stun.fwdnet.net",
+          "stun.ideasip.com",
+          "stun.iptel.org",
+          "stun.rixtelecom.se",
+          "stun.schlund.de",
+          "stun.softjoys.com",
+          "stun.voiparound.com",
+          "stun.voipbuster.com",
+          "stun.voipstunt.com",
+          "stun.voxgratia.org",
+          "stun.xten.com",
+        ],
+      },
       remote: O.none(),
       local: params.localStream,
       wsConnectionStatus: "connecting",
@@ -108,7 +129,7 @@ const sdpHandler = (rtc: WebRTC, message: IceSchema.Sdp) =>
 
 const createPeer = (rtc: WebRTC) =>
   E.gen(function* () {
-    const peer = new RTCPeerConnection({ iceServers: rtc.iceServers });
+    const peer = new RTCPeerConnection({ iceServers: [rtc.iceServer] });
     rtc.peer = O.some(peer);
     const remoteStream = yield* E.try(() => new MediaStream());
     rtc.remote = O.some(remoteStream);
