@@ -152,7 +152,7 @@ const createPeer = (rtc: WebRTC) =>
 const handleConnectionStateChange = (peer: RTCPeerConnection) => () =>
   E.gen(function* () {
     const state = peer.iceConnectionState;
-    if (state === "failed" || state === "disconnected" || state === "closed") {
+    if (state === "failed") {
       yield* E.try(() => peer.restartIce());
     }
   }).pipe(E.runFork);
