@@ -139,9 +139,17 @@ const createPeer = (rtc: WebRTC) =>
     peer.ontrack = handleTrack(rtc, remoteStream);
     // handle negotiation
     peer.onnegotiationneeded = handleNegotiation(rtc, peer);
-
+    peer.onconnectionstatechange = handleConnectionStateChange(peer);
     return peer;
   });
+
+const handleConnectionStateChange = (peer: RTCPeerConnection) => () =>
+  E.gen(function* () {
+    const state = peer.iceConnectionState;
+    if (state === "failed" || state === "disconnected" || state === "closed") {
+      yield* E.try(() => peer.restartIce());
+    }
+  }).pipe(E.runFork);
 
 const handleNegotiation = (rtc: WebRTC, peer: RTCPeerConnection) => () =>
   E.gen(function* () {
@@ -156,7 +164,6 @@ const handleNegotiation = (rtc: WebRTC, peer: RTCPeerConnection) => () =>
 
 const handleTrack = (_rtc: WebRTC, remote: MediaStream) => (event: RTCTrackEvent) =>
   E.try(() => {
-    console.log("got event", event.track);
     remote.addTrack(event.track);
   }).pipe(E.runFork);
 
