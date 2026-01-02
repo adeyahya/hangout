@@ -145,15 +145,20 @@ const createPeer = (rtc: WebRTC) =>
     peer.ontrack = handleTrack(rtc, remoteStream);
     // handle negotiation
     peer.onnegotiationneeded = handleNegotiation(rtc, peer);
-    peer.onconnectionstatechange = handleConnectionStateChange(peer);
+    peer.onconnectionstatechange = handleConnectionStateChange(rtc, peer);
     return peer;
   });
 
-const handleConnectionStateChange = (peer: RTCPeerConnection) => () =>
+const handleConnectionStateChange = (rtc: WebRTC, peer: RTCPeerConnection) => () =>
   E.gen(function* () {
     const state = peer.iceConnectionState;
     if (state === "failed") {
-      yield* E.try(() => peer.restartIce());
+      return yield* E.try(() => peer.restartIce());
+    }
+
+    if (state === "disconnected") {
+      rtc.peer = O.none();
+      rtc.remote = O.none();
     }
   }).pipe(E.runFork);
 

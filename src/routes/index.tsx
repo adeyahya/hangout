@@ -19,7 +19,13 @@ function RouteComponent() {
   useEffect(() => {
     const updateState = (rtc: WebRTC.WebRTC) =>
       E.gen(function* () {
-        yield* E.sync(() => O.isSome(rtc.remote) && setRemote(rtc.remote.value));
+        yield* E.sync(() => {
+          if (O.isSome(rtc.remote)) {
+            setRemote(rtc.remote.value);
+          } else {
+            setRemote(undefined);
+          }
+        });
       }).pipe(E.delay("200 millis"), E.repeat({ until: () => false }));
 
     const fork = MS.make()
