@@ -33,6 +33,12 @@ export const make = (params: { localStream: MediaStream; iceServers: RTCIceServe
       dispose: E.void,
     };
 
+    // ping pong
+    E.try(() => RTC.ws.send("ping"))
+      .pipe(E.delay("2000 millis"))
+      .pipe(E.repeat({ until: () => false }))
+      .pipe(E.runFork);
+
     const initializeWs = async () => {
       if (RTC.wsConnectionStatus === "disconnected") {
         await E.runPromise(E.sleep("100 millis"));

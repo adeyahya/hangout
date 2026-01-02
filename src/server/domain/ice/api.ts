@@ -44,6 +44,12 @@ export const api = E.gen(function* () {
               _(
                 E.gen(function* () {
                   const { connection } = yield* stateRef.get;
+
+                  // ping pong to make connection keep alive
+                  if (event.data === "ping") {
+                    return ctx.send("pong");
+                  }
+
                   // relay
                   yield* E.forEach(connection, ([raw, conCtx]) =>
                     E.try(() => {
