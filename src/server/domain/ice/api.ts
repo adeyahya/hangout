@@ -59,6 +59,7 @@ export const api = E.gen(function* () {
       const payload = yield* IceSchema.encoder({ type: "peer-left", room: "" }).pipe(
         E.flatMap((result) => E.try(() => JSON.stringify(result))),
       );
+      yield* E.sleep("500 millis");
       yield* sendMessageToRaw(pair, payload);
     });
 
