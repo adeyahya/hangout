@@ -13,12 +13,6 @@ export const Sdp = S.Struct({
 });
 export type Sdp = S.Schema.Type<typeof Sdp>;
 
-export const Join = S.Struct({
-  type: S.Literal("join"),
-  room: S.String,
-});
-export type Join = S.Schema.Type<typeof Join>;
-
 export const PeerJoin = S.Struct({
   type: S.Literal("peer-join"),
   room: S.String,
@@ -31,7 +25,13 @@ export const PeerLeft = S.Struct({
 });
 export type PeerLeft = S.Schema.Type<typeof PeerLeft>;
 
-export const MessageSchema = S.Union(Sdp, Join, Ice, PeerJoin, PeerLeft);
+export const RawMessage = S.Struct({
+  type: S.Literal("raw-message"),
+  message: S.String,
+});
+export type RawMessage = S.Schema.Type<typeof RawMessage>;
+
+export const MessageSchema = S.Union(Sdp, Ice, PeerJoin, PeerLeft);
 
 export const encoder = S.encode(MessageSchema);
 export const decoder = S.decode(MessageSchema);
