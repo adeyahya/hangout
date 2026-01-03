@@ -3,9 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import * as MS from "@/lib/media-stream";
 import * as WebRTC from "@/lib/webrtc";
-import * as IceSchema from "@/schema/ice-schema";
 
-import { Fiber } from "effect";
 import * as E from "effect/Effect";
 import type { RuntimeFiber } from "effect/Fiber";
 import * as O from "effect/Option";
