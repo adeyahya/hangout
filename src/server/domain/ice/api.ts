@@ -145,7 +145,13 @@ export const api = E.gen(function* () {
                     .pipe(mutex.withPermits(1));
                 }),
               ).pipe(E.runFork),
-            onClose: (_event, ctx) => _(disconnectHandler(ctx.raw)).pipe(E.runFork),
+            onClose: (_event, ctx) =>
+              _(
+                E.gen(function* () {
+                  const mutex = yield* getMutex(ctx.raw);
+                  yield* disconnectHandler(ctx.raw).pipe(mutex.withPermits(1));
+                }),
+              ).pipe(E.runFork),
           } satisfies WSEvents;
         }),
       ),

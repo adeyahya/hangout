@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import * as MS from "@/lib/media-stream";
 import * as WebRTC from "@/lib/webrtc";
 
+import { Fiber } from "effect";
 import * as E from "effect/Effect";
 import type { RuntimeFiber } from "effect/Fiber";
 import * as O from "effect/Option";
@@ -14,7 +15,6 @@ export const Route = createFileRoute("/")({
 
 function RouteComponent() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const runtimeRef = useRef<RuntimeFiber<void, never>>();
   const rtcRef = useRef<WebRTC.WebRTC>();
   const [remote, setRemote] = useState<MediaStream>();
 
@@ -45,13 +45,15 @@ function RouteComponent() {
   };
 
   useEffect(() => {
-    if (runtimeRef.current) return;
-    runtimeRef.current = createRTC();
+    const fork = createRTC();
+    return () => {
+      Fiber.interrupt(fork).pipe(E.runFork);
+    };
   }, []);
 
   return (
     <div className="flex flex-col h-screen w-screen">
-      <div className="flex-1 flex flex-row bg-black">
+      <div className="flex-1 flex flex-col lg:flex-row bg-black">
         <div className="flex-1">{remote && <Vid stream={remote} />}</div>
         <div className="flex-1">
           <video
@@ -63,7 +65,7 @@ function RouteComponent() {
           />
         </div>
       </div>
-      <div className="h-[200px] flex items-center justify-center">
+      <div className="h-[100px] lg:h-[200px] flex items-center justify-center">
         <button
           disabled={!remote}
           className="bg-blue-500 active:bg-blue-600 disabled:bg-gray-200 text-4xl p-4 px-8 text-white rounded-lg"

@@ -126,6 +126,8 @@ const sdpHandler = (rtc: WebRTC, message: IceSchema.Sdp) =>
     const peer = yield* getPeer(rtc);
     const description = message.description as RTCSessionDescriptionInit;
 
+    if (peer.signalingState === "stable") return;
+
     yield* E.tryPromise(() => peer.setRemoteDescription(description));
     if (description.type === "offer") {
       const answer = yield* E.tryPromise(() => peer.createAnswer());
@@ -144,8 +146,6 @@ const createPeer = (rtc: WebRTC) =>
       iceServers,
     });
     rtc.peer = O.some(peer);
-    const remoteStream = yield* E.try(() => new MediaStream());
-    rtc.remote = O.some(remoteStream);
 
     // transmit local tracks to peer
     yield* E.forEach(
@@ -157,7 +157,7 @@ const createPeer = (rtc: WebRTC) =>
     // handle ice candidate
     peer.onicecandidate = handleIceEvent(rtc);
     // receive track from peers
-    peer.ontrack = handleTrack(rtc, remoteStream);
+    peer.ontrack = handleTrack(rtc);
     // handle negotiation
     peer.onnegotiationneeded = handleNegotiation(rtc, peer);
     peer.onconnectionstatechange = handleConnectionStateChange(rtc, peer);
@@ -183,10 +183,17 @@ const handleNegotiation = (rtc: WebRTC, peer: RTCPeerConnection) => () =>
     .pipe(E.ensuring(Ref.update(rtc.state, (value) => ({ ...value, makingOffer: false }))))
     .pipe(E.runFork);
 
-const handleTrack = (_rtc: WebRTC, remote: MediaStream) => (event: RTCTrackEvent) =>
-  E.try(() => {
-    remote.addTrack(event.track);
-  }).pipe(E.runFork);
+const handleTrack = (rtc: WebRTC) => (event: RTCTrackEvent) =>
+  rtc.remote.pipe(
+    O.match({
+      onNone: () => {
+        const remote = new MediaStream();
+        remote.addTrack(event.track);
+        rtc.remote = O.some(remote);
+      },
+      onSome: (remote) => remote.addTrack(event.track),
+    }),
+  );
 
 const handleIceEvent = (rtc: WebRTC) => (event: RTCPeerConnectionIceEvent) =>
   E.gen(function* () {
