@@ -6,7 +6,6 @@ import * as WebRTC from "@/lib/webrtc";
 
 import { Fiber } from "effect";
 import * as E from "effect/Effect";
-import type { RuntimeFiber } from "effect/Fiber";
 import * as O from "effect/Option";
 
 export const Route = createFileRoute("/")({
