@@ -56,7 +56,7 @@ function RouteComponent() {
         <div className="flex-1">{remote && <Vid stream={remote} />}</div>
         <div className="flex-1">
           <video
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain -scale-x-100"
             controls={false}
             muted
             autoPlay
@@ -88,7 +88,7 @@ const Vid = (props: { stream: MediaStream }) => {
 
   return (
     <video
-      className="w-full h-full object-contain bg-black"
+      className="w-full h-full object-contain -scale-x-100"
       controls={false}
       autoPlay
       ref={videoRef}
