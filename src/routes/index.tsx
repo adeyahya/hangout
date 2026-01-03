@@ -3,9 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import * as MS from "@/lib/media-stream";
 import * as WebRTC from "@/lib/webrtc";
+import * as IceSchema from "@/schema/ice-schema";
 
 import { Fiber } from "effect";
 import * as E from "effect/Effect";
+import type { RuntimeFiber } from "effect/Fiber";
 import * as O from "effect/Option";
 
 export const Route = createFileRoute("/")({
@@ -14,11 +16,14 @@ export const Route = createFileRoute("/")({
 
 function RouteComponent() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const runtimeRef = useRef<RuntimeFiber<void, never>>();
+  const rtcRef = useRef<WebRTC.WebRTC>();
   const [remote, setRemote] = useState<MediaStream>();
 
-  useEffect(() => {
+  const createRTC = () => {
     const updateState = (rtc: WebRTC.WebRTC) =>
       E.gen(function* () {
+        rtcRef.current = rtc;
         yield* E.sync(() => {
           if (O.isSome(rtc.remote)) {
             setRemote(rtc.remote.value);
@@ -28,27 +33,47 @@ function RouteComponent() {
         });
       }).pipe(E.delay("200 millis"), E.repeat({ until: () => false }));
 
-    const fork = MS.make()
+    return MS.make()
       .pipe(E.tap((stream) => (videoRef.current!.srcObject = stream)))
       .pipe(E.flatMap((stream) => WebRTC.make({ localStream: stream, iceServers: [] })))
       .pipe(E.flatMap(updateState))
+      .pipe(E.catchAllCause(E.logError))
       .pipe(E.runFork);
+  };
 
-    return () => {
-      Fiber.interrupt(fork).pipe(E.runFork);
-    };
+  const handleNext = () => {
+    if (!remote) return;
+    window.location.reload();
+  };
+
+  useEffect(() => {
+    if (runtimeRef.current) return;
+    runtimeRef.current = createRTC();
   }, []);
 
   return (
-    <div className="grid grid-cols-2 h-screen w-screen bg-black">
-      <video
-        className="w-full h-full object-contain bg-black"
-        controls={false}
-        muted
-        autoPlay
-        ref={videoRef}
-      />
-      {remote && <Vid stream={remote} />}
+    <div className="flex flex-col h-screen w-screen">
+      <div className="flex-1 flex flex-row bg-black">
+        <div className="flex-1">{remote && <Vid stream={remote} />}</div>
+        <div className="flex-1">
+          <video
+            className="w-full h-full object-contain"
+            controls={false}
+            muted
+            autoPlay
+            ref={videoRef}
+          />
+        </div>
+      </div>
+      <div className="h-[200px] flex items-center justify-center">
+        <button
+          disabled={!remote}
+          className="bg-blue-500 active:bg-blue-600 disabled:bg-gray-200 text-4xl p-4 px-8 text-white rounded-lg"
+          onClick={handleNext}
+        >
+          Sekiiiiiiiip
+        </button>
+      </div>
     </div>
   );
 }

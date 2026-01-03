@@ -7,9 +7,21 @@ import * as E from "effect/Effect";
 import * as M from "effect/Match";
 import * as O from "effect/Option";
 
+const iceServers: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun.l.google.com:5349" },
+  { urls: "stun:stun1.l.google.com:3478" },
+  { urls: "stun:stun1.l.google.com:5349" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:5349" },
+  { urls: "stun:stun3.l.google.com:3478" },
+  { urls: "stun:stun3.l.google.com:5349" },
+  { urls: "stun:stun4.l.google.com:19302" },
+  { urls: "stun:stun4.l.google.com:5349" },
+];
+
 export interface WebRTC {
   peer: O.Option<RTCPeerConnection>;
-  // iceServer: RTCIceServer;
   local: MediaStream;
   remote: O.Option<MediaStream>;
   state: Ref.Ref<{ makingOffer: boolean }>;
@@ -24,7 +36,6 @@ export const make = (params: { localStream: MediaStream; iceServers: RTCIceServe
     const wsURL = new URL("/api/ice", feEnv.VITE_WS_ENDPOINT);
     const RTC: WebRTC = {
       peer: O.none(),
-      // iceServer: {},
       remote: O.none(),
       local: params.localStream,
       wsConnectionStatus: "connecting",
@@ -63,6 +74,7 @@ export const make = (params: { localStream: MediaStream; iceServers: RTCIceServe
             .pipe(M.when({ type: "ice" }, (message) => iceHandler(RTC, message)))
             .pipe(M.when({ type: "peer-join" }, () => createPeer(RTC)))
             .pipe(M.when({ type: "sdp" }, (message) => sdpHandler(RTC, message)))
+            .pipe(M.when({ type: "peer-left" }, () => handlePeerLeft(RTC)))
             .pipe(M.orElse(() => E.void));
         }).pipe(E.runFork);
     };
@@ -73,6 +85,27 @@ export const make = (params: { localStream: MediaStream; iceServers: RTCIceServe
     RTC.dispose = E.try(() => {});
 
     return RTC;
+  });
+
+const handlePeerLeft = (rtc: WebRTC) =>
+  E.gen(function* () {
+    const payload = yield* IceSchema.encoder({ type: "peer-join", room: "" }).pipe(
+      E.flatMap((result) => E.try(() => JSON.stringify(result))),
+    );
+
+    yield* rtc.peer.pipe(
+      O.match({
+        onNone: () => E.void,
+        onSome: (peer) =>
+          E.try(() => peer.close()).pipe(
+            E.tap(() => {
+              rtc.peer = O.none();
+              rtc.remote = O.none();
+            }),
+          ),
+      }),
+    );
+    yield* E.try(() => rtc.ws.send(payload));
   });
 
 const getPeer = (rtc: WebRTC) =>
@@ -91,14 +124,7 @@ const iceHandler = (rtc: WebRTC, message: IceSchema.Ice) =>
 const sdpHandler = (rtc: WebRTC, message: IceSchema.Sdp) =>
   E.gen(function* () {
     const peer = yield* getPeer(rtc);
-    const state = yield* rtc.state.get;
     const description = message.description as RTCSessionDescriptionInit;
-    const offerCollision =
-      description.type === "offer" && (state.makingOffer || peer.signalingState !== "stable");
-    if (offerCollision) {
-      yield* E.logWarning("Offer collision: ignoring offer (simple policy)");
-      return;
-    }
 
     yield* E.tryPromise(() => peer.setRemoteDescription(description));
     if (description.type === "offer") {
@@ -115,18 +141,7 @@ const sdpHandler = (rtc: WebRTC, message: IceSchema.Sdp) =>
 const createPeer = (rtc: WebRTC) =>
   E.gen(function* () {
     const peer = new RTCPeerConnection({
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun.l.google.com:5349" },
-        { urls: "stun:stun1.l.google.com:3478" },
-        { urls: "stun:stun1.l.google.com:5349" },
-        { urls: "stun:stun2.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:5349" },
-        { urls: "stun:stun3.l.google.com:3478" },
-        { urls: "stun:stun3.l.google.com:5349" },
-        { urls: "stun:stun4.l.google.com:19302" },
-        { urls: "stun:stun4.l.google.com:5349" },
-      ],
+      iceServers,
     });
     rtc.peer = O.some(peer);
     const remoteStream = yield* E.try(() => new MediaStream());
@@ -149,16 +164,11 @@ const createPeer = (rtc: WebRTC) =>
     return peer;
   });
 
-const handleConnectionStateChange = (rtc: WebRTC, peer: RTCPeerConnection) => () =>
+const handleConnectionStateChange = (_rtc: WebRTC, peer: RTCPeerConnection) => () =>
   E.gen(function* () {
     const state = peer.iceConnectionState;
     if (state === "failed") {
       return yield* E.try(() => peer.restartIce());
-    }
-
-    if (state === "disconnected") {
-      rtc.peer = O.none();
-      rtc.remote = O.none();
     }
   }).pipe(E.runFork);
 
